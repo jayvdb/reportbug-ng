@@ -17,7 +17,7 @@
 
 
 import logging
-import thread
+import _thread
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import QCoreApplication
@@ -90,7 +90,7 @@ class RngGui(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow):
         self._stateChanged(None, None)
 
         if args:
-            self.lineEdit.setText(unicode(args[0]))
+            self.lineEdit.setText(str(args[0]))
             self.lineedit_return_pressed()
 
 
@@ -144,7 +144,7 @@ class RngGui(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow):
 
     def lineedit_text_changed(self, text):
         self.logger.info("Text changed: %s" % text)
-        text = unicode(text)
+        text = str(text)
         self.proxymodel.setFilterRegExp(\
             QtCore.QRegExp(text,
                            QtCore.Qt.CaseInsensitive,
@@ -157,7 +157,7 @@ class RngGui(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow):
         #
         # just in case ;)
         #
-        text = unicode(self.lineEdit.text())
+        text = str(self.lineEdit.text())
         if text.startswith("http://"):
             self._show_url(text)
             return
@@ -327,7 +327,7 @@ the Free Software Foundation; either version 2 of the License, or
         if dialog.exec_() == dialog.Accepted:
             package = dialog.lineEditPackage.text()
             version = dialog.lineEditVersion.text()
-            severity = unicode(dialog.comboBoxSeverity.currentText()).lower()
+            severity = str(dialog.comboBoxSeverity.currentText()).lower()
             tags = []
             cc = []
             if dialog.checkBoxL10n.isChecked():
@@ -351,13 +351,13 @@ the Free Software Foundation; either version 2 of the License, or
             # Closing a bug
             elif type == 'close':
                 severity = ""
-                subject = unicode(dialog.lineEditSummary.text())
+                subject = str(dialog.lineEditSummary.text())
                 body = rng.prepare_minimal_body(package, version, severity, tags, cc)
             # New or moreinfo
             else:
                 if type == 'moreinfo':
                     severity = ""
-                subject = unicode("[%s] %s" % (package, dialog.lineEditSummary.text()))
+                subject = str("[%s] %s" % (package, dialog.lineEditSummary.text()))
                 body = rng.prepareBody(package, version, severity, tags, cc, script)
 
             if len(subject) == 0:
@@ -367,7 +367,7 @@ the Free Software Foundation; either version 2 of the License, or
                 txt = rng.get_presubj(package)
                 if txt:
                     QtWidgets.QMessageBox.information(self, "Information", txt)
-            thread.start_new_thread(rng.prepareMail, (mua, to, subject, body))
+            _thread.start_new_thread(rng.prepareMail, (mua, to, subject, body))
 
 
     def _apply_settings(self):

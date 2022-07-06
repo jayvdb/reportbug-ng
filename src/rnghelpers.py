@@ -17,14 +17,14 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-import commands
+import subprocess
 import re
 import os
 import webbrowser
-import urllib
-import thread
+import urllib.request, urllib.parse, urllib.error
+import _thread
 import logging
-import ConfigParser
+import configparser
 import tempfile
 
 from PyQt5.QtCore import QCoreApplication
@@ -160,8 +160,8 @@ def prepareMail(mua, to, subject, body, firstcall=True):
     mua = mua.lower()
 
     if mua not in MUA_NO_URLQUOTE:
-        subject = urllib.quote(subject.encode("ascii", "replace"))
-        body = urllib.quote(body.encode("ascii", "replace"))
+        subject = urllib.parse.quote(subject.encode("ascii", "replace"))
+        body = urllib.parse.quote(body.encode("ascii", "replace"))
     else:
         to = to.encode("ascii", "replace")
         subject = subject.encode("ascii", "replace")
@@ -287,8 +287,8 @@ def getSystemInfo():
     """Returns some hopefully useful sysinfo"""
 
     s = "--- System information. ---\n"
-    s += "Architecture: %s\n" % commands.getoutput("dpkg --print-installation-architecture 2>/dev/null")
-    s += "Kernel:       %s\n" % commands.getoutput("uname -sr 2>/dev/null")
+    s += "Architecture: %s\n" % subprocess.getoutput("dpkg --print-installation-architecture 2>/dev/null")
+    s += "Kernel:       %s\n" % subprocess.getoutput("uname -sr 2>/dev/null")
 
     return s
 
@@ -404,20 +404,20 @@ def getPackageScriptOutput(package):
         logger.error("Xterm not found, cannot start bugscript.")
         cmd = ""
     if os.path.isfile(path[1]):
-        cmd += commands.mkarg(path[1]) + " 3>&1"
+        cmd += subprocess.mkarg(path[1]) + " 3>&1"
         output += "--- Output from package bug script ---\n"
-        output += commands.getoutput(cmd)
+        output += subprocess.getoutput(cmd)
     elif os.path.exists(path[0]):
-        cmd += commands.mkarg(path[0]) + " 3>&1"
+        cmd += subprocess.mkarg(path[0]) + " 3>&1"
         output += "--- Output from package bug script ---\n"
-        output += commands.getoutput(cmd)
-    return unicode(output, errors="replace")
+        output += subprocess.getoutput(cmd)
+    return str(output, errors="replace")
 
 
 def getInstalledPackageVersion(package):
     """Returns the version of package, if installed or empty string if not installed"""
 
-    out = commands.getoutput("dpkg-query --status %s 2>/dev/null" % package)
+    out = subprocess.getoutput("dpkg-query --status %s 2>/dev/null" % package)
     version = re.findall("^Version:\s(.*)$", out, re.MULTILINE)
 
     if version:
@@ -436,7 +436,7 @@ def getInstalledPackageVersions(packages):
         packagestring += " "+i
         result[i] = ""
 
-    out = commands.getoutput("dpkg-query --status %s 2>/dev/null" % packagestring)
+    out = subprocess.getoutput("dpkg-query --status %s 2>/dev/null" % packagestring)
 
     packagere = re.compile("^Package:\s(.*)$", re.MULTILINE)
     versionre = re.compile("^Version:\s(.*)$", re.MULTILINE)
@@ -460,7 +460,7 @@ def getDepends(packagelist):
 
     list = []
     for package in packagelist:
-        out = commands.getoutput("dpkg-query --status %s 2>/dev/null" % package)
+        out = subprocess.getoutput("dpkg-query --status %s 2>/dev/null" % package)
         depends = re.findall("^Depends:\s(.*)$", out, re.MULTILINE)
         if depends:
             depends = depends[0]
@@ -480,7 +480,7 @@ def getSuggests(packagelist):
 
     list = []
     for package in packagelist:
-        out = commands.getoutput("dpkg-query --status %s 2>/dev/null" % package)
+        out = subprocess.getoutput("dpkg-query --status %s 2>/dev/null" % package)
         suggests = re.findall("^Suggests:\s(.*)$", out, re.MULTILINE)
         if suggests:
             suggests = suggests[0]
@@ -500,7 +500,7 @@ def getRecommends(packagelist):
 
     list = []
     for package in packagelist:
-        out = commands.getoutput("dpkg-query --status %s 2>/dev/null" % package)
+        out = subprocess.getoutput("dpkg-query --status %s 2>/dev/null" % package)
         recommends = re.findall("^Recommends:\s(.*)$", out, re.MULTILINE)
         if recommends:
             recommends = recommends[0]
@@ -516,7 +516,7 @@ def getRecommends(packagelist):
 def getSourceName(package):
     """Returns source package name for given package."""
 
-    out = commands.getoutput("dpkg-query --status %s 2>/dev/null" % package)
+    out = subprocess.getoutput("dpkg-query --status %s 2>/dev/null" % package)
     source = re.findall("^Source:\s(.*)$", out, re.MULTILINE)
 
     if source:
@@ -530,7 +530,7 @@ def getDebianReleaseInfo():
 
     debinfo = ''
     mylist = []
-    output = commands.getoutput('apt-cache policy 2>/dev/null')
+    output = subprocess.getoutput('apt-cache policy 2>/dev/null')
     if output:
         mre = re.compile('\s+(\d+)\s+.*$\s+release\s.*a=(.*?),.*$\s+origin\s(.*)$', re.MULTILINE)
         for match in mre.finditer(output):
@@ -567,12 +567,12 @@ def callBrowser(url):
     # (xdg-utils not installed or some other error), fall back to pythons
     # semi optimal solution.
     logger.debug("Just before xdg-open")
-    status, output = commands.getstatusoutput('xdg-open "%s"' % url)
+    status, output = subprocess.getstatusoutput('xdg-open "%s"' % url)
     logger.debug("After xdg-open")
     if status != 0:
         logger.warning("xdg-open %s returned (%i, %s), falling back to python's webbrowser.open" % (url, status, output))
         logger.debug("Just before webbrowser.open")
-        thread.start_new_thread(webbrowser.open, (url,))
+        _thread.start_new_thread(webbrowser.open, (url,))
         logger.debug("After webbrowser.open")
 
 
@@ -582,7 +582,7 @@ def callMailClient(command):
     (status, output)
     """
     logger.debug("Just before the MUA call: %s" % str(command))
-    status, output = commands.getstatusoutput(command)
+    status, output = subprocess.getstatusoutput(command)
     logger.debug("After the  MUA call")
     return status, output
 
@@ -672,7 +672,7 @@ class Settings(object):
 
     def load(self):
         """Load settings from configfile."""
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(self.configfile)
         if config.has_option("general", "lastMUA"):
             self.lastmua = config.get("general", "lastMUA")
@@ -730,7 +730,7 @@ class Settings(object):
 
     def save(self):
         """Save settings to configfile."""
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(self.configfile)
         if not config.has_section("general"):
             config.add_section("general")
